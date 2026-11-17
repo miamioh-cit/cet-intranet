@@ -90,6 +90,9 @@ header .subtitle { font-size: .8125rem; margin-top: .2rem; }
 .staff-navigation a:hover { color: var(--polytechnic-blue); text-decoration: underline; }
 .staff-navigation { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 footer .staff-navigation { justify-content: center; }
+.staff-resources-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.admin-icon img { display: block; width: 26px; height: 26px; object-fit: contain; }
+.card-icon img { display: block; width: 28px; height: 28px; object-fit: contain; }
 .signout-button { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--polytechnic-blue); font: inherit; padding: .5rem .8rem; cursor: pointer; }
 .signout-button:disabled { opacity: .6; cursor: wait; }
 .header-content > .theme-picker { margin-left: auto; }

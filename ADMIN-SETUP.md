@@ -1,6 +1,6 @@
 # Staff sign-in
 
-Seven student tools remain on the public homepage. Five staff tools live at
+Seven student tools remain on the public homepage. Staff resources and administration tools live at
 `/admin/`. Signed-out visitors are redirected to the branded `/login/` page.
 The design includes username/password fields and a password visibility toggle.
 Staff can change their own password while signed in and sign out using the
