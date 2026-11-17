@@ -2,7 +2,7 @@ FROM node:24-alpine AS auth-dependencies
 WORKDIR /app/auth
 COPY auth/package.json auth/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
-COPY auth/server.cjs auth/server.test.cjs ./
+COPY auth/server.cjs auth/account-store.cjs auth/server.test.cjs ./
 RUN npm test && rm server.test.cjs
 
 FROM nginx:alpine

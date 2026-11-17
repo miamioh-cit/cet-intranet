@@ -5,6 +5,7 @@
     const submit = document.querySelector('.submit');
     const message = document.querySelector('#preview-message');
     const showMessage = text => { message.hidden = false; message.textContent = text; };
+    if (new URLSearchParams(location.search).get('password-changed') === '1') showMessage('Your password was changed. Sign in with your new password.');
     let permitted = location.protocol === 'https:';
     submit.disabled = true;
     fetch('/auth/options', { credentials: 'same-origin', cache: 'no-store' })

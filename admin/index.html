@@ -359,12 +359,27 @@
                     <div class="subtitle">cet-intranet</div>
                 </div>
             </div>
+            <div class="header-actions">
+            <button id="change-password" class="signout-button" type="button">Change password</button>
             <label class="theme-picker" hidden><span>Theme</span><select aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+            <button id="signout" class="signout-button" type="button">Sign out</button>
+            </div>
         </div>
     </header>
 
+    <dialog id="password-dialog" aria-labelledby="password-title">
+        <form id="password-form">
+            <h2 id="password-title">Change password</h2>
+            <p class="password-help">Choose a unique password of at least 12 characters.</p>
+            <label for="current-password">Current password</label><input id="current-password" type="password" autocomplete="current-password" required maxlength="72">
+            <label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
+            <label for="confirm-password">Confirm new password</label><input id="confirm-password" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
+            <p id="password-status" role="status"></p>
+            <div class="password-actions"><button id="cancel-password" class="signout-button" type="button">Cancel</button><button id="save-password" type="submit">Save password</button></div>
+        </form>
+    </dialog>
     <main class="container">
-        <nav class="staff-navigation" aria-label="Portal navigation"><a href="/">← Back to student tools</a><button id="signout" class="signout-button" type="button">Sign out</button></nav><p id="signout-status" role="status"></p>
+        <nav class="staff-navigation" aria-label="Portal navigation"><a href="/">← Back to student tools</a></nav><p id="signout-status" role="status"></p>
         <h2 class="page-title">Staff tools</h2>
         <p class="page-description">Infrastructure and administration resources for authorized staff.</p>
         <!-- Admin Tools Section -->

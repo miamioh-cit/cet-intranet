@@ -1,5 +1,29 @@
 (() => {
     const button = document.querySelector('#signout');
+    const dialog = document.querySelector('#password-dialog');
+    const form = document.querySelector('#password-form');
+    const status = document.querySelector('#password-status');
+    const save = document.querySelector('#save-password');
+    document.querySelector('#change-password').addEventListener('click', () => { form.reset(); status.textContent = ''; dialog.showModal(); });
+    document.querySelector('#cancel-password').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => form.reset());
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const currentPassword = document.querySelector('#current-password').value;
+        const newPassword = document.querySelector('#new-password').value;
+        const confirmPassword = document.querySelector('#confirm-password').value;
+        if (newPassword !== confirmPassword) { status.textContent = 'The new passwords do not match.'; return; }
+        save.disabled = true;
+        status.textContent = 'Saving…';
+        try {
+            const response = await fetch('/auth/change-password', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword, confirmPassword }) });
+            const result = await response.json();
+            form.reset();
+            status.textContent = result.message || 'Unable to change your password.';
+            if (response.ok) location.replace('/login/?password-changed=1');
+        } catch { status.textContent = 'Unable to connect. Please try again.'; }
+        finally { save.disabled = false; }
+    });
     button.addEventListener('click', async () => {
         button.disabled = true;
         try {

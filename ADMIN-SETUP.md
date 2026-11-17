@@ -3,7 +3,8 @@
 Seven student tools remain on the public homepage. Five staff tools live at
 `/admin/`. Signed-out visitors are redirected to the branded `/login/` page.
 The design includes username/password fields and a password visibility toggle.
-Staff can sign out from the admin page. Student links, branding, themes, and
+Staff can change their own password while signed in and sign out using the
+header controls, with Sign out immediately to the right of Theme. Student links, branding, themes, and
 favorites remain unchanged; admin favorites are displayed only on the admin page.
 
 ## Accounts in Rancher
@@ -31,9 +32,33 @@ Usernames can contain letters, numbers, underscores, dots, @, and hyphens, up to
 64 characters. Passwords must fit bcrypt's 72-byte input limit.
 
 Create or update the Secret in Rancher with the file contents as the `htpasswd`
-key. Do not use the file as a ConfigMap. It is mounted read-only outside the web
-folder. If absent or invalid, the student homepage stays up and sign-in displays
+key. Do not use the file as a ConfigMap. The deployed authentication service reads
+the Secret through the Kubernetes API. It is also mounted read-only outside the
+web folder for compatibility. If absent or invalid, the student homepage stays up and sign-in displays
 a configuration error; protected tools remain inaccessible.
+
+## Change password while signed in
+
+The header's Change password button opens a dialog asking for the current
+password, new password, and confirmation. New passwords must have at least 12
+characters and fit the 72-byte bcrypt limit. Successful changes sign out all of
+that account's existing sessions, and the user signs in with the new password.
+Staff cannot choose a different username in this operation. Forgotten passwords
+still require an authorized administrator to replace that account's hash in the
+Secret; this release does not implement email recovery.
+
+The deployment manifests create one dedicated ServiceAccount, Role, and
+RoleBinding per environment. They grant only get and patch access to the named
+intranet-admin-auth Secret in that namespace. The API token is projected only
+into the staff-auth container, not Nginx. Changes check the current hash and
+the Secret's resourceVersion before replacing htpasswd, so simultaneous edits
+cannot silently overwrite another user's changes. The API connection verifies
+the Kubernetes CA certificate. Jenkins needs permission to apply these
+namespace-scoped RBAC resources before this release is deployed.
+
+Account entries are created in Rancher, not in source code. To add staff, generate
+a separate bcrypt entry for each username and include all entries, one per line,
+in the same htpasswd value. Replacing one account must preserve the other lines.
 
 ## Temporary HTTP access
 
@@ -69,6 +94,12 @@ only on the pod's loopback interface. The existing Jenkinsfile tags both contain
 images through its existing substitution and deploys Dev and Prod automatically.
 The Jenkinsfile has not been changed. The new Docker build installs the pinned
 `bcryptjs` dependency using npm ci and runs the authentication tests first.
+
+Dev and Prod Services additionally select their own intranet-environment pod
+label. This prevents either Service from selecting the other environment's pod
+when both are in the same namespace. Existing immutable Deployment selectors
+are unchanged. Each environment still uses a single replica, because sessions
+are held in memory rather than a shared session database.
 
 Deploy and verify Dev before production where your deployment process allows it.
 Check public student links, the logo, themes, and favorites; signed-out access to

@@ -5,15 +5,21 @@ const os = require('node:os');
 const path = require('node:path');
 const bcrypt = require('bcryptjs');
 const { createAuthServer, COOKIE, IDLE, TTL } = require('./server.cjs');
+const { replaceAccount } = require('./account-store.cjs');
 
 async function fixture(t, options = {}) {
+  const { writable = false, ...serverOptions } = options;
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cet-auth-test-'));
   const file = path.join(dir, 'htpasswd');
   const password = 'temporary-test-password';
   const hash = await bcrypt.hash(password, 8);
   await fs.writeFile(file, 'staff:' + hash + '\n');
   let now = Date.now();
-  const server = createAuthServer({ passwordFile: file, clock: () => now, ...options });
+  const accountStore = writable ? {
+    read: () => fs.readFile(file, 'utf8'),
+    change: async (username, expectedHash, newHash) => fs.writeFile(file, replaceAccount(await fs.readFile(file, 'utf8'), username, expectedHash, newHash)),
+  } : undefined;
+  const server = createAuthServer({ passwordFile: file, clock: () => now, accountStore, ...serverOptions });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = 'http://127.0.0.1:' + server.address().port;
   t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); await fs.rm(dir, { recursive: true, force: true }); });
@@ -92,4 +98,44 @@ test('repeated failed logins are limited', async t => {
   const f = await fixture(t);
   for (let i = 0; i < 10; i++) assert.equal((await f.login({ password: 'wrong' })).status, 401);
   assert.equal((await f.login()).status, 429);
+});
+
+test('signed-in staff change only their own password and all old sessions expire', async t => {
+  const f = await fixture(t, { writable: true });
+  const otherHash = await bcrypt.hash('another-person-password', 8);
+  await fs.appendFile(f.file, 'other:' + otherHash + '\n');
+  const first = (await f.login()).headers.get('set-cookie').split(';')[0];
+  const second = (await f.login()).headers.get('set-cookie').split(';')[0];
+  const response = await f.call('/change-password', { method: 'POST', cookie: first, body: JSON.stringify({ username: 'other', currentPassword: 'temporary-test-password', newPassword: 'my-new-unique-password', confirmPassword: 'my-new-unique-password' }) });
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal((await f.call('/check', { cookie: first })).status, 401);
+  assert.equal((await f.call('/check', { cookie: second })).status, 401);
+  assert.equal((await f.login()).status, 401);
+  assert.equal((await f.login({ password: 'my-new-unique-password' })).status, 200);
+  assert((await fs.readFile(f.file, 'utf8')).includes('other:' + otherHash));
+});
+test('anonymous, cross-site, incorrect-current-password and mismatched changes fail', async t => {
+  const f = await fixture(t, { writable: true });
+  const data = { currentPassword: 'temporary-test-password', newPassword: 'my-new-unique-password', confirmPassword: 'my-new-unique-password' };
+  assert.equal((await f.call('/change-password', { method: 'POST', body: JSON.stringify(data) })).status, 401);
+  const cookie = (await f.login()).headers.get('set-cookie').split(';')[0];
+  assert.equal((await f.call('/change-password', { method: 'POST', cookie, origin: 'https://other.test', body: JSON.stringify(data) })).status, 403);
+  assert.equal((await f.call('/change-password', { method: 'POST', cookie, body: JSON.stringify({ ...data, currentPassword: 'wrong' }) })).status, 401);
+  assert.equal((await f.call('/change-password', { method: 'POST', cookie, body: JSON.stringify({ ...data, confirmPassword: 'different' }) })).status, 400);
+  assert.equal((await f.call('/change-password', { method: 'POST', cookie, body: JSON.stringify({ ...data, newPassword: 'short', confirmPassword: 'short' }) })).status, 400);
+  assert.equal((await f.login()).status, 200);
+});
+test('account updates preserve other accounts and reject stale or duplicated records', () => {
+  const content = '# Keep this note\nfirst:old\nsecond:untouched\n';
+  assert.equal(replaceAccount(content, 'first', 'old', 'new'), '# Keep this note\nfirst:new\nsecond:untouched\n');
+  assert.throws(() => replaceAccount(content, 'first', 'stale', 'new'), { code: 'ACCOUNT_CHANGED' });
+  assert.throws(() => replaceAccount(content + 'first:old\n', 'first', 'old', 'new'), { code: 'ACCOUNT_CHANGED' });
+});
+test('storage failure does not report success or replace the working password', async t => {
+  const f = await fixture(t);
+  const cookie = (await f.login()).headers.get('set-cookie').split(';')[0];
+  const response = await f.call('/change-password', { method: 'POST', cookie, body: JSON.stringify({ currentPassword: 'temporary-test-password', newPassword: 'my-new-unique-password', confirmPassword: 'my-new-unique-password' }) });
+  assert.equal(response.status, 503);
+  assert.equal((await f.login()).status, 200);
 });

@@ -11,7 +11,10 @@ spec:
     metadata:
       labels:
         app: nginx
+        intranet-environment: prod
     spec:
+      serviceAccountName: intranet-prod-staff-auth
+      automountServiceAccountToken: false
       containers:
       - name: nginx
         image: cithit/cit-intranet:latest # this is pulling from dockerhub                     
@@ -27,6 +30,8 @@ spec:
         env:
         - name: AUTH_ALLOW_HTTP
           value: "true" # Temporary until the HTTPS certificate is installed.
+        - name: AUTH_ACCOUNT_STORAGE
+          value: "kubernetes"
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
@@ -46,7 +51,27 @@ spec:
         - name: admin-auth
           mountPath: /etc/nginx/auth
           readOnly: true
+        - name: staff-api
+          mountPath: /var/run/secrets/staff-api
+          readOnly: true
       volumes:
+      - name: staff-api
+        projected:
+          defaultMode: 0444
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 3600
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+              - key: ca.crt
+                path: ca.crt
+          - downwardAPI:
+              items:
+              - path: namespace
+                fieldRef:
+                  fieldPath: metadata.namespace
       - name: admin-auth
         secret:
           secretName: intranet-admin-auth
@@ -86,4 +111,33 @@ spec:
     targetPort: 80
   selector:
     app: nginx 
+    intranet-environment: prod
 
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: intranet-prod-staff-auth
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: intranet-prod-staff-auth
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["intranet-admin-auth"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: intranet-prod-staff-auth
+subjects:
+- kind: ServiceAccount
+  name: intranet-prod-staff-auth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: intranet-prod-staff-auth

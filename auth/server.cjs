@@ -3,6 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
+const { createKubernetesAccountStore } = require('./account-store.cjs');
 
 const COOKIE = '__Host-cet_staff';
 const TTL = 8 * 60 * 60 * 1000;
@@ -10,7 +11,8 @@ const IDLE = 30 * 60 * 1000;
 const WINDOW = 15 * 60 * 1000;
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 
-function createAuthServer({ passwordFile = process.env.AUTH_PASSWORD_FILE || '/etc/nginx/auth/htpasswd', clock = Date.now, allowHttp = process.env.AUTH_ALLOW_HTTP === 'true' } = {}) {
+function createAuthServer({ passwordFile = process.env.AUTH_PASSWORD_FILE || '/etc/nginx/auth/htpasswd', clock = Date.now, allowHttp = process.env.AUTH_ALLOW_HTTP === 'true', accountStore } = {}) {
+  const store = accountStore || (process.env.AUTH_ACCOUNT_STORAGE === 'kubernetes' ? createKubernetesAccountStore() : { read: () => fs.readFile(passwordFile, 'utf8') });
   const sessions = new Map();
   const attempts = new Map();
   const dummyHash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
@@ -38,7 +40,7 @@ function createAuthServer({ passwordFile = process.env.AUTH_PASSWORD_FILE || '/e
     return `${cookieName(req)}=${value}; Path=/; Max-Age=${age}; ${secure(req) ? 'Secure; ' : ''}HttpOnly; SameSite=Strict`;
   }
   async function accounts() {
-    const content = await fs.readFile(passwordFile, 'utf8');
+    const content = await store.read();
     const users = new Map();
     for (const line of content.split(/\r?\n/)) {
       if (!line || line.startsWith('#')) continue;
@@ -98,7 +100,7 @@ function createAuthServer({ passwordFile = process.env.AUTH_PASSWORD_FILE || '/e
         if (!secure(req) && !(allowHttp && req.headers['x-forwarded-proto'] === 'http')) return reply(res, 401, 'Sign in required');
         return reply(res, await sessionFor(req) ? 200 : 401, 'Session check');
       }
-      if (!['/login', '/logout'].includes(req.url)) return reply(res, 404, 'Not found');
+      if (!['/login', '/logout', '/change-password'].includes(req.url)) return reply(res, 404, 'Not found');
       if (req.method !== 'POST') return reply(res, 405, 'POST required', { Allow: 'POST' });
       if (!originMatches(req)) return reply(res, 403, 'Use the secure HTTPS intranet address to sign in.');
       if (req.url === '/logout') {
@@ -111,6 +113,29 @@ function createAuthServer({ passwordFile = process.env.AUTH_PASSWORD_FILE || '/e
       let input;
       try { input = await body(req); } catch { return reply(res, 400, 'Enter a valid username and password.'); }
       const { username, password } = input || {};
+      if (req.url === '/change-password') {
+        const session = await sessionFor(req);
+        if (!session) return reply(res, 401, 'Your session expired. Please sign in again.');
+        if (!throttle('change:' + digest(session.username), 10)) return reply(res, 429, 'Too many attempts. Try again in 15 minutes.', { 'Retry-After': '900' });
+        const { currentPassword, newPassword, confirmPassword } = input || {};
+        if (typeof currentPassword !== 'string' || !currentPassword || Buffer.byteLength(currentPassword, 'utf8') > 72 || typeof newPassword !== 'string' || newPassword.length < 12 || Buffer.byteLength(newPassword, 'utf8') > 72 || newPassword !== confirmPassword) return reply(res, 400, 'Use a new password of at least 12 characters (up to 72 bytes) and enter it twice.');
+        if (newPassword === currentPassword) return reply(res, 400, 'Choose a different password.');
+        if (!store.change) return reply(res, 503, 'Password changes are not configured yet. Contact your administrator.');
+        if (verifying >= 4) return reply(res, 503, 'Sign-in is busy. Please try again shortly.');
+        verifying++;
+        try {
+          const users = await accounts();
+          const oldHash = users.get(session.username);
+          if (!oldHash || digest(oldHash) !== session.accountHash || !await bcrypt.compare(currentPassword, oldHash)) return reply(res, 401, 'Current password is incorrect.');
+          const newHash = await bcrypt.hash(newPassword, 12);
+          try { await store.change(session.username, oldHash, newHash); }
+          catch (error) {
+            return reply(res, error.code === 'ACCOUNT_CHANGED' ? 409 : 503, error.code === 'ACCOUNT_CHANGED' ? 'Your account changed. Sign in again before retrying.' : 'Unable to save your password. Please try again or contact your administrator.');
+          }
+          for (const [id, active] of sessions) if (active.username === session.username) sessions.delete(id);
+          return reply(res, 200, 'Password changed. Sign in with your new password.', { 'Set-Cookie': cookie(req, '', 0) });
+        } finally { verifying--; }
+      }
       if (typeof username !== 'string' || !/^[A-Za-z0-9_.@-]{1,64}$/.test(username) || typeof password !== 'string' || !password || Buffer.byteLength(password, 'utf8') > 72) return reply(res, 400, 'Enter a valid username and password.');
       if (!throttle('user:' + digest(username), 10)) return reply(res, 429, 'Too many attempts. Try again in 15 minutes.', { 'Retry-After': '900' });
       let users;
