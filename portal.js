@@ -33,7 +33,7 @@
     favoriteSection.hidden = true;
     favoriteSection.setAttribute('aria-labelledby', 'favorites-title');
     favoriteSection.innerHTML = '<div class="section-header"><h2 class="section-title" id="favorites-title" tabindex="-1">Favorite tools</h2></div><div class="card-grid favorites-grid"></div>';
-    const firstGrid = document.querySelector('.card-grid');
+    const firstGrid = document.querySelector('.card-grid, .admin-grid');
     const firstSection = firstGrid.closest('section') || firstGrid.previousElementSibling;
     firstSection.before(favoriteSection);
     const status = document.createElement('p');
@@ -97,3 +97,4 @@
         if (event.key === key || event.key === null) { favorites = readFavorites(); renderFavorites(); }
     });
 })();
+

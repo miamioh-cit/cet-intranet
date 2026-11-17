@@ -17,6 +17,19 @@ spec:
         image: cithit/cit-intranet:latest # this is pulling from dockerhub                     
         ports:
         - containerPort: 80  # Expose NGINX on port 80      
+        volumeMounts:
+        - name: admin-auth
+          mountPath: /etc/nginx/auth
+          readOnly: true
+      volumes:
+      - name: admin-auth
+        secret:
+          secretName: intranet-admin-auth
+          optional: true
+          defaultMode: 0444
+          items:
+          - key: htpasswd
+            path: htpasswd
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -48,3 +61,4 @@ spec:
     targetPort: 80
   selector:
     app: nginx 
+
