@@ -10,6 +10,7 @@
     <meta name="color-scheme" content="light dark">
     <script src="/theme.js"></script>
     <script src="/portal.js" defer></script>
+    <script src="/admin/session.js" defer></script>
     <style>
         :root {
             --miami-red: #C3142D;
@@ -363,7 +364,7 @@
     </header>
 
     <main class="container">
-        <nav class="staff-navigation" aria-label="Portal navigation"><a href="/">← Back to student tools</a></nav>
+        <nav class="staff-navigation" aria-label="Portal navigation"><a href="/">← Back to student tools</a><button id="signout" class="signout-button" type="button">Sign out</button></nav><p id="signout-status" role="status"></p>
         <h2 class="page-title">Staff tools</h2>
         <p class="page-description">Infrastructure and administration resources for authorized staff.</p>
         <!-- Admin Tools Section -->

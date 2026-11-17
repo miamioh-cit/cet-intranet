@@ -1,40 +1,82 @@
-# Staff tools
+# Staff sign-in
 
-The public homepage keeps all seven student resources. Five administration links
-now live at `/admin/`, with a small Staff login link in the homepage footer.
-The existing theme and favorites work on both pages; admin favorites appear only
-on the admin page. The browser supplies the username/password prompt.
+Seven student tools remain on the public homepage. Five staff tools live at
+`/admin/`. Signed-out visitors are redirected to the branded `/login/` page.
+The design includes username/password fields and a password visibility toggle.
+Staff can sign out from the admin page. Student links, branding, themes, and
+favorites remain unchanged; admin favorites are displayed only on the admin page.
 
-## Before deploying
+## Accounts in Rancher
 
-1. Confirm the intranet uses HTTPS and still requires campus or VPN access.
-   The manifests in this repository do not configure TLS or the VPN restriction;
-   verify those at the actual network entry point before entering staff passwords.
-2. Create an htpasswd file with a separate account for each approved staff member.
-   Use an interactive password prompt, not a password in a shell command. For
-   example, Apache `htpasswd -cB htpasswd STAFF_USERNAME` creates the first account;
-   omit `-c` when adding accounts so existing users are preserved.
-3. In Rancher, create a Secret named `intranet-admin-auth` in each deployment's
-   namespace, with a key named `htpasswd` containing the file's contents.
-   Keep the file and its hashes outside GitHub and outside the container image.
-4. Deploy and verify Dev before approving production. The existing Jenkinsfile
-   deploys to both environments automatically; it has not been changed here.
+Create a Secret named `intranet-admin-auth` in each deployment's namespace.
+It needs a key named `htpasswd` containing separate bcrypt password hashes for
+approved staff. The usernames in this file are the permitted accounts; there is
+no public registration. Never commit this file or passwords to GitHub.
 
-The Secret mounts read-only outside the website folder. It is optional so a
-missing Secret does not take the student homepage down. Nginx still denies admin
-access: missing credentials get 401; supplied credentials with no password file
-are denied access. Set up the Secret before offering staff login.
+Using Apache htpasswd, create the first account with:
 
-Check `/admin`, `/admin/`, and `/admin/index.html`: anonymous visitors must never
-receive admin content, wrong passwords must fail, and approved accounts must work.
-Check the student homepage, advising page, themes, favorites, and the logo too.
+```
+htpasswd -cB -C 12 htpasswd STAFF_USERNAME
+```
 
-Remove an account from the Secret's htpasswd contents to revoke it. Directory
-Secret mounts allow updates without baking passwords into a new image; allow for
-Kubernetes propagation. Browser Basic Auth has no reliable site logout button.
+Enter the password at the prompt. To add more accounts, omit `-c` so the existing
+accounts are preserved:
 
-This protects the admin directory only. Jenkins, Rancher, Proxmox, vCenter, and
-Trello still require their own access controls. Existing student links are retained,
-including the Rancher link that shares its destination with the admin Rancher card.
+```
+htpasswd -B -C 12 htpasswd ANOTHER_USERNAME
+```
 
-No changes are required to Backstage, its data, or its deployment pipeline.
+The supported format is bcrypt (`$2a$`, `$2b$`, or `$2y$`) with cost 8–14.
+Usernames can contain letters, numbers, underscores, dots, @, and hyphens, up to
+64 characters. Passwords must fit bcrypt's 72-byte input limit.
+
+Create or update the Secret in Rancher with the file contents as the `htpasswd`
+key. Do not use the file as a ConfigMap. It is mounted read-only outside the web
+folder. If absent or invalid, the student homepage stays up and sign-in displays
+a configuration error; protected tools remain inaccessible.
+
+## Temporary HTTP access
+
+At the owner's request, the Dev and Prod manifests currently set
+`AUTH_ALLOW_HTTP: "true"` on the `staff-auth` container so login works while the
+HTTPS certificate request is pending. HTTP does not encrypt passwords or session
+cookies. Use temporary passwords that are not reused for university accounts or
+other systems. Campus/VPN network restrictions must remain in place.
+
+When the certificate is installed:
+
+1. Configure HTTPS for the existing hostname at the actual ingress/proxy and
+   redirect HTTP traffic to HTTPS.
+2. Confirm the proxy supplies `X-Forwarded-Proto: https` to Nginx.
+3. Change `AUTH_ALLOW_HTTP` to `"false"` in both repository deployment manifests
+   and deploy that change. Otherwise a subsequent deployment would re-enable it.
+4. Replace temporary passwords in the Secret. Active sessions using changed
+   password hashes are revoked after the Secret update reaches the pod.
+
+HTTPS sessions use Secure, HttpOnly, SameSite=Strict cookies with a __Host prefix.
+Temporary HTTP sessions use a separate HttpOnly, SameSite=Strict cookie.
+Sessions expire after 30 minutes idle or eight hours total. Restarting the auth
+container signs everyone out; it does not remove accounts. Cookies are random
+session identifiers, never plaintext passwords. Passwords are not saved in browser
+storage. Failed attempts are rate-limited; cross-site login/logout requests fail.
+
+## Deployment
+
+The same Docker image contains Nginx and the staff authentication code. The
+existing deployment gains a small `staff-auth` container inside the same pod,
+using that same image tag; no separate Rancher application is needed. It listens
+only on the pod's loopback interface. The existing Jenkinsfile tags both container
+images through its existing substitution and deploys Dev and Prod automatically.
+The Jenkinsfile has not been changed. The new Docker build installs the pinned
+`bcryptjs` dependency using npm ci and runs the authentication tests first.
+
+Deploy and verify Dev before production where your deployment process allows it.
+Check public student links, the logo, themes, and favorites; signed-out access to
+`/admin/` and `/admin/index.html` must redirect to login. Check correct/incorrect
+passwords and Sign out. No staff account data or live Rancher configuration is
+created by committing these files. Credentials must be configured separately.
+
+This intranet has no project database. The change does not alter Backstage,
+existing VMs, or project data. Jenkins, Rancher, Proxmox, vCenter, and Trello still
+need their own access controls. The student Rancher link retains its existing
+destination, which is shared with the staff Rancher card.

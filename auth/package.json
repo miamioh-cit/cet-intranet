@@ -1,0 +1,8 @@
+{
+  "name": "cet-intranet-staff-auth",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.cjs", "test": "node --test server.test.cjs" },
+  "dependencies": { "bcryptjs": "3.0.3" }
+}

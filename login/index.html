@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Staff sign in | Miami University Polytechnic</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #051f55; background: #f3f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; display: grid; grid-template-rows: 5px 1fr auto; }
+    .brand-line { background: linear-gradient(90deg, #051f55 0 75%, #c8102e 75%); }
+    main { display: grid; place-items: center; padding: 48px 24px 32px; }
+    .signin { width: min(100%, 440px); }
+    .brand { text-align: center; margin-bottom: 29px; }
+    .brand img { width: 73px; height: 82px; object-fit: contain; display: block; margin: 0 auto 17px; }
+    .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -.35px; margin: 0; }
+    .brand-subtitle { font-size: 13px; color: #63728c; margin: 7px 0 0; }
+    .card { padding: 34px; background: white; border: 1px solid #dce3ef; border-radius: 16px; box-shadow: 0 12px 40px #051f550a; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; height: 4px; background: #c8102e; top: 0; left: 0; right: 0; }
+    .eyebrow { display: flex; align-items: center; gap: 7px; color: #69768b; font-size: 10px; font-weight: 700; letter-spacing: 1.7px; text-transform: uppercase; margin: 0 0 15px; }
+    .eyebrow svg { color: #c8102e; width: 14px; height: 14px; }
+    h1 { margin: 0 0 9px; font-size: 29px; font-weight: 730; letter-spacing: -.9px; }
+    .intro { color: #68758b; font-size: 14px; line-height: 1.6; margin: 0 0 27px; }
+    label { display: block; color: #243650; font-size: 13px; font-weight: 600; margin-bottom: 9px; }
+    input { width: 100%; min-height: 48px; border: 1px solid #cbd5e3; border-radius: 7px; padding: 12px 14px; font: inherit; font-size: 14px; color: #152f54; background: #fff; }
+    input::placeholder { color: #8490a3; }
+    input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #719ce9; outline-offset: 3px; }
+    .field { margin-bottom: 21px; }
+    .password { position: relative; }
+    .password input { padding-right: 70px; }
+    .show { position: absolute; right: 5px; top: 5px; height: 38px; border: 0; padding: 0 10px; color: #52647e; font: inherit; font-size: 12px; font-weight: 600; background: transparent; cursor: pointer; border-radius: 4px; }
+    .submit { width: 100%; min-height: 48px; background: #051f55; color: white; border: 0; border-radius: 7px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 7px; }
+    .submit:hover { background: #133c78; }
+    .notice { margin: 20px 0 0; text-align: center; font-size: 11px; color: #718096; line-height: 1.6; }
+    .back { display: block; width: fit-content; margin: 24px auto 0; font-size: 13px; text-decoration: none; color: #4c627f; }
+    .back:hover { text-decoration: underline; }
+    footer { text-align: center; color: #7a879b; padding: 0 20px 24px; font-size: 11px; line-height: 1.7; }
+    #preview-message { font-size: 13px; color: #9b1123; line-height: 1.5; margin-bottom: 0; }
+    [hidden] { display: none; }
+    @media (max-width: 480px) { main { padding: 32px 20px; } .card { padding: 28px 24px; } .brand-name { font-size: 17px; } h1 { font-size: 27px; } }
+  </style>
+</head>
+<body>
+  <div class="brand-line" aria-hidden="true"></div>
+  <main>
+    <div class="signin">
+      <div class="brand">
+        <img src="/images/miami-polytechnic.png" alt="Miami University Polytechnic" width="73" height="82">
+        <p class="brand-name">Miami University Polytechnic</p>
+        <p class="brand-subtitle">cet-intranet</p>
+      </div>
+      <section class="card" aria-labelledby="signin-title">
+        <p class="eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3"/></svg>Staff access</p>
+        <h1 id="signin-title">Welcome back.</h1>
+        <p class="intro">Sign in to access your administration tools.</p>
+        <form id="signin-form">
+          <div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="username" placeholder="Enter your username" required></div>
+          <div class="field"><label for="password">Password</label><div class="password"><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button class="show" type="button" aria-controls="password" aria-label="Show password" aria-pressed="false">Show</button></div></div>
+          <button class="submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
+          <p id="preview-message" role="status" hidden></p>
+        </form>
+        <p class="notice">Authorized staff only · Campus or VPN connection required</p>
+      </section>
+      <a class="back" href="/">← Back to student tools</a>
+    </div>
+  </main>
+  <footer>Miami University · Applied Computing and Engineering Technology</footer>
+  <script src="/login/login.js" defer></script>
+</body>
+</html>

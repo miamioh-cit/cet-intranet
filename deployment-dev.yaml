@@ -21,6 +21,31 @@ spec:
         - name: admin-auth
           mountPath: /etc/nginx/auth
           readOnly: true
+      - name: staff-auth
+        image: cithit/cit-intranet:latest
+        command: ["node", "/app/auth/server.cjs"]
+        env:
+        - name: AUTH_ALLOW_HTTP
+          value: "true" # Temporary until the HTTPS certificate is installed.
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: "1"
+            memory: 128Mi
+        volumeMounts:
+        - name: admin-auth
+          mountPath: /etc/nginx/auth
+          readOnly: true
       volumes:
       - name: admin-auth
         secret:
