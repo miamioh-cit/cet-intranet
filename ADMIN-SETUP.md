@@ -4,7 +4,7 @@ Seven student tools remain on the public homepage. Five staff tools live at
 `/admin/`. Signed-out visitors are redirected to the branded `/login/` page.
 The design includes username/password fields and a password visibility toggle.
 Staff can change their own password while signed in and sign out using the
-header controls, with Sign out immediately to the right of Theme. Student links, branding, themes, and
+buttons at the bottom of the admin page. Theme remains at the right of the header. Student links, branding, themes, and
 favorites remain unchanged; admin favorites are displayed only on the admin page.
 
 ## Accounts in Rancher
@@ -39,7 +39,7 @@ a configuration error; protected tools remain inaccessible.
 
 ## Change password while signed in
 
-The header's Change password button opens a dialog asking for the current
+The Change password button at the bottom of the page opens a dialog asking for the current
 password, new password, and confirmation. New passwords must have at least 12
 characters and fit the 72-byte bcrypt limit. Successful changes sign out all of
 that account's existing sessions, and the user signs in with the new password.

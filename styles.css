@@ -94,6 +94,19 @@ header .subtitle { font-size: .8125rem; margin-top: .2rem; }
 .header-content > .theme-picker { margin-left: auto; }
 .header-actions { margin-left: auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .75rem; }
 .header-actions .theme-picker { margin-left: 0; }
+.account-actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; margin: 0 0 1.5rem; }
+.account-button { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; min-height: 42px; padding: .65rem 1.1rem; border: 1px solid transparent; border-radius: 9px; font: inherit; font-size: .8125rem; font-weight: 600; line-height: 1.2; cursor: pointer; transition: background .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.account-button svg { width: 18px; height: 18px; flex-shrink: 0; }
+.account-button-password { color: #174b96; background: #f0f5ff; border-color: #bed0ed; }
+.account-button-password:hover { background: #e4edff; border-color: #799fd7; box-shadow: 0 2px 6px #051f550c; }
+.account-button-signout { color: #fff; background: #c8102e; border-color: #c8102e; box-shadow: 0 2px 4px #9910261a; }
+.account-button-signout:hover { background: #a80e27; border-color: #a80e27; box-shadow: 0 3px 8px #99102626; }
+.account-button:disabled { opacity: .6; cursor: wait; }
+:root[data-theme="dark"] .account-button-password { color: #c4d9ff; background: #1b3050; border-color: #46638c; }
+:root[data-theme="dark"] .account-button-password:hover { background: #254269; border-color: #7399ca; }
+:root[data-theme="dark"] .account-button-signout { background: #bd1837; border-color: #db3c59; }
+:root[data-theme="dark"] .account-button-signout:hover { background: #d02142; border-color: #ee627c; }
+@media (prefers-reduced-motion: reduce) { .account-button { transition: none; } }
 @media (max-width: 768px) { .header-content:has(.header-actions) { flex-wrap: wrap; } .header-actions { width: 100%; padding-bottom: .35rem; } }
 #password-dialog { width: min(440px, calc(100% - 2rem)); max-height: calc(100svh - 2rem); overflow: auto; border: 1px solid var(--border-color); border-top: 4px solid var(--miami-red); border-radius: 12px; background: var(--bg-card); color: var(--text-primary); padding: 1.75rem; margin: auto; box-shadow: 0 20px 70px #051f5530; }
 #password-dialog::backdrop { background: #051f5570; }

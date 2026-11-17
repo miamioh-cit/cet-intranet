@@ -360,9 +360,7 @@
                 </div>
             </div>
             <div class="header-actions">
-            <button id="change-password" class="signout-button" type="button">Change password</button>
             <label class="theme-picker" hidden><span>Theme</span><select aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-            <button id="signout" class="signout-button" type="button">Sign out</button>
             </div>
         </div>
     </header>
@@ -430,7 +428,13 @@
                 </a>
             </div>
         </section>
-        <footer><p>&copy; 2026 Miami University Department of Applied Computing and Engineering Technology</p></footer>
+        <footer>
+            <div class="account-actions" aria-label="Account controls">
+                <button id="change-password" class="account-button account-button-password" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="9" r="4"/><path d="m11 12 9 9m-5-5 3-3m0 6 3-3"/></svg>Change password</button>
+                <button id="signout" class="account-button account-button-signout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4H5v16h5m4-12 4 4-4 4m-5-4h11" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign out</button>
+            </div>
+            <p>&copy; 2026 Miami University Department of Applied Computing and Engineering Technology</p>
+        </footer>
     </main>
 </body>
 </html>
