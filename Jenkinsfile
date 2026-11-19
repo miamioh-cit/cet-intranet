@@ -1,17 +1,20 @@
 pipeline {
-    agent any 
+    agent any
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+    }
     environment {
         DOCKER_CREDENTIALS_ID = 'roseaw-dockerhub'  
         DOCKER_IMAGE = 'cithit/cit-intranet'                       
-        IMAGE_TAG = "build-${BUILD_NUMBER}"
-        GITHUB_URL = 'https://github.com/miamioh-cit/cit-intranet.git' 
-        KUBECONFIG = credentials('cit-intranet')                           
+        IMAGE_TAG = "intranet-new-${BUILD_NUMBER}"
+        KUBECONFIG = credentials('cet-intranet')
+        KUBE_NAMESPACE = 'cet-intranet'                           
     }
     stages {
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: "${GITHUB_URL}"]]])
+                checkout scm
             }
         }
         stage('Build Docker Image') {
@@ -30,33 +33,25 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Dev Environment') {
-            steps {
-                script {
-                    // This sets up the Kubernetes configuration using the specified KUBECONFIG
-                    def kubeConfig = readFile(KUBECONFIG)
-                    // This updates the deployment-dev.yaml to use the new image tag
-                    sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-dev.yaml"
-                    sh "kubectl apply -f deployment-dev.yaml --insecure-skip-tls-verify"
-                }
-            }
-        }
         stage('Deploy to Prod Environment') {
             steps {
                 script {
-                    // Set up Kubernetes configuration using the specified KUBECONFIG
-                    sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-prod.yaml"
-                    sh "kubectl apply -f deployment-prod.yaml --insecure-skip-tls-verify"
+                    // Update both Nginx and staff-auth to the image built by this job.
+                    sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|g' deployment-prod.yaml"
+                    sh '''
+                        set -eu
+                        kubectl -n "$KUBE_NAMESPACE" get deployments >/dev/null
+                        kubectl -n "$KUBE_NAMESPACE" get secret intranet-admin-auth >/dev/null
+                        kubectl apply --dry-run=server -n "$KUBE_NAMESPACE" -f deployment-prod.yaml
+                        kubectl apply -n "$KUBE_NAMESPACE" -f deployment-prod.yaml
+                        kubectl -n "$KUBE_NAMESPACE" rollout status deployment/prod-deployment --timeout=300s
+                    '''
                 }
             }
         }
         stage('Check Kubernetes Cluster') {
             steps {
-                script {
-                    sh "kubectl get pods --insecure-skip-tls-verify"
-                    sh "kubectl get services --insecure-skip-tls-verify"
-                    sh "kubectl get deploy --insecure-skip-tls-verify"
-                }
+                sh 'kubectl -n "$KUBE_NAMESPACE" get pods,services,deployments'
             }
         }
     }

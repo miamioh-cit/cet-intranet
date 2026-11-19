@@ -90,9 +90,9 @@ storage. Failed attempts are rate-limited; cross-site login/logout requests fail
 The same Docker image contains Nginx and the staff authentication code. The
 existing deployment gains a small `staff-auth` container inside the same pod,
 using that same image tag; no separate Rancher application is needed. It listens
-only on the pod's loopback interface. The existing Jenkinsfile tags both container
-images through its existing substitution and deploys Dev and Prod automatically.
-The Jenkinsfile has not been changed. The new Docker build installs the pinned
+only on the pod's loopback interface. The Jenkinsfile tags both container images and deploys production only to the
+`cet-intranet` namespace, using the Jenkins Secret file credential ID `cet-intranet`.
+The development manifest remains available for a separately configured deployment. The new Docker build installs the pinned
 `bcryptjs` dependency using npm ci and runs the authentication tests first.
 
 Dev and Prod Services additionally select their own intranet-environment pod
@@ -101,7 +101,30 @@ when both are in the same namespace. Existing immutable Deployment selectors
 are unchanged. Each environment still uses a single replica, because sessions
 are held in memory rather than a shared session database.
 
-Deploy and verify Dev before production where your deployment process allows it.
+Before the first production deployment on Admin Rancher:
+1. Create the `cet-intranet` namespace on the new application cluster.
+2. Securely copy the current `intranet-admin-auth` Secret into that namespace,
+   preserving existing accounts and password changes. Never commit its contents.
+3. Configure Jenkins Secret file credential `cet-intranet` with the new application
+   cluster's kubeconfig, not Rancher's local management cluster. The identity needs
+   permission to apply the namespace-scoped application and RBAC resources.
+4. Keep automatic builds paused until the planned cutover. The production Service
+   requests `10.48.229.179` on TCP port 80. Release that IP from the old cluster's
+   Service and verify the old cluster no longer advertises it before enabling the
+   new cluster's MetalLB advertisement. Scaling the old Deployment to zero alone
+   does not release its Service IP. Preserve the old configuration for rollback.
+5. Ensure the destination MetalLB pool permits this IP and its advertisement is
+   configured for the destination network. The pipeline does not install MetalLB,
+   create its configuration, or configure DNS or HTTPS.
+6. Run Jenkins and verify the production rollout. Both containers use the build's
+   `intranet-new-` image tag. The pipeline uses kubeconfig certificate verification;
+   supply the correct CA trust in the kubeconfig instead of bypassing TLS checks.
+
+The production manifest uses its LoadBalancer Service directly and does not
+create an Ingress. HTTPS requires a separately configured TLS endpoint; the
+temporary HTTP setting described above remains unchanged. Applying this file
+does not delete an Ingress that was previously created manually or by an older job.
+
 Check public student links, the logo, themes, and favorites; signed-out access to
 `/admin/` and `/admin/index.html` must redirect to login. Check correct/incorrect
 passwords and Sign out. No staff account data or live Rancher configuration is
