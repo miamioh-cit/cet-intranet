@@ -8,7 +8,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'roseaw-dockerhub'  
         DOCKER_IMAGE = 'cithit/cit-intranet'                       
         IMAGE_TAG = "intranet-new-${BUILD_NUMBER}"
-        KUBECONFIG = credentials('cet-intranet')
+        KUBECONFIG = credentials('cet-intranet1')
         KUBE_NAMESPACE = 'cet-intranet'                           
     }
     stages {
